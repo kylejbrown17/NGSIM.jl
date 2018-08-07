@@ -3,7 +3,7 @@ __precompile__(true)
 module NGSIM
 
 using AutomotiveDrivingModels
-using DataFrames
+using DataFrames, CSV
 using Distributions
 
 export
@@ -27,7 +27,8 @@ export
     filter_trajectory!,
     symmetric_exponential_moving_average!,
     load_trajdata,
-    convert_raw_ngsim_to_trajdatas
+    convert_raw_ngsim_to_trajdatas,
+    smooth_ngsim_data
 
 include("roadway.jl")
 include("ngsim_trajdata.jl")

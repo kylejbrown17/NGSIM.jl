@@ -31,13 +31,15 @@ mutable struct NGSIMTrajdata
 
         @assert(isfile(input_path))
 
-        df = readtable(input_path, separator=' ', header = false)
-        col_names = [:id, :frame, :n_frames_in_dataset, :epoch, :local_x, :local_y, :global_x, :global_y, :length, :width, :class, :speed, :acc, :lane, :carind_front, :carind_rear, :dist_headway, :time_headway]
-        for (i,name) in enumerate(col_names)
-            rename!(df, Symbol(@sprintf("x%d", i)), name)
-        end
+        # df = readtable(input_path, separator=' ', header = false)
+        df = CSV.read(input_path; types=[Int, Int, Int, Int, Float64, Float64, Float64, Float64, Float64, Float64, Int, Float64, Float64, Int, Int, Int, Float64, Float64])
+        # col_names = [:id, :frame, :n_frames_in_dataset, :epoch, :local_x, :local_y, :global_x, :global_y, :length, :width, :class, :speed, :acc, :lane, :carind_front, :carind_rear, :dist_headway, :time_headway]
+        # current_col_names = df.colindex.names
+        # for (i,old_name) in enumerate(current_col_names)
+        #     rename!(df, old_name => col_names[i])
+        # end
 
-        df[:global_heading] = fill(NaN, nrow(df))
+        # df[:global_heading] = fill(NaN, nrow(df))
 
         car2start = Dict{Int, Int}()
         frame2cars = Dict{Int, Vector{Int}}()
@@ -163,12 +165,12 @@ function pull_vehicle_headings!(trajdata::NGSIMTrajdata;
 end
 
 const NGSIM_TRAJDATA_PATHS = [
-                        Pkg.dir("NGSIM", "data", "i101_trajectories-0750am-0805am.txt"),
-                        Pkg.dir("NGSIM", "data", "i101_trajectories-0805am-0820am.txt"),
-                        Pkg.dir("NGSIM", "data", "i101_trajectories-0820am-0835am.txt"),
-                        Pkg.dir("NGSIM", "data", "i80_trajectories-0400-0415.txt"),
-                        Pkg.dir("NGSIM", "data", "i80_trajectories-0500-0515.txt"),
-                        Pkg.dir("NGSIM", "data", "i80_trajectories-0515-0530.txt"),
+                        "i101_trajectories-0750am-0805am.csv",
+                        "i101_trajectories-0805am-0820am.csv",
+                        "i101_trajectories-0820am-0835am.csv",
+                        "i80_trajectories-0400-0415.csv",
+                        "i80_trajectories-0500-0515.csv",
+                        "i80_trajectories-0515-0530.csv",
                        ]
 
 load_ngsim_trajdata(i::Int) = NGSIMTrajdata(NGSIM_TRAJDATA_PATHS[i])

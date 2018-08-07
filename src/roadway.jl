@@ -189,5 +189,3 @@ end
 
 const ROADWAY_80 = open(io->read(io, MIME"text/plain"(), Roadway), Pkg.dir("NGSIM", "data", "ngsim_80.txt"), "r")
 const ROADWAY_101 = open(io->read(io, MIME"text/plain"(), Roadway), Pkg.dir("NGSIM", "data", "ngsim_101.txt"), "r")
-
-

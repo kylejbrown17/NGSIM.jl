@@ -49,7 +49,8 @@ mutable struct FilterTrajectoryResult
 
     function FilterTrajectoryResult(trajdata::NGSIMTrajdata, carid::Int)
         dfstart = trajdata.car2start[carid]
-        N = trajdata.df[dfstart, :n_frames_in_dataset]
+        # N = trajdata.df[dfstart, :n_frames_in_dataset]
+        N = min(nrow(trajdata.df) - dfstart, trajdata.df[dfstart, :n_frames_in_dataset])
 
         # these are our observations
         x_arr = fill(NaN, N)
@@ -106,7 +107,8 @@ end
 function Base.copy!(trajdata::NGSIMTrajdata, ftr::FilterTrajectoryResult)
 
     dfstart = trajdata.car2start[ftr.carid]
-    N = trajdata.df[dfstart, :n_frames_in_dataset]
+    # N = trajdata.df[dfstart, :n_frames_in_dataset]
+    N = min(nrow(trajdata.df) - dfstart, trajdata.df[dfstart, :n_frames_in_dataset])
 
     # copy results back to trajdata
     for i in 1 : N
@@ -146,9 +148,10 @@ function load_ngsim_trajdata(filepath::String; autofilter::Bool=true)
     tdraw = NGSIMTrajdata(filepath)
     toc()
 
-    if autofilter && splitext(filepath)[2] == ".txt" # txt is original
+    if autofilter && splitext(filepath)[2] == ".csv" # csv is original
         print("filtering:         "); tic()
         for carid in carid_set(tdraw)
+            # print("car id ",carid)
             filter_trajectory!(tdraw, carid)
         end
         toc()
@@ -192,6 +195,19 @@ end
 
 get_corresponding_roadway(filename::String) = contains(filename, "i101") ? ROADWAY_101 : ROADWAY_80
 
+function smooth_ngsim_data()
+    for filename in NGSIM_TRAJDATA_PATHS
+        println("converting ", filename); tic()
+
+        filepath = Pkg.dir("NGSIM", "data", filename)
+        roadway = get_corresponding_roadway(filename)
+        trajdata = NGSIM.load_ngsim_trajdata(filepath)
+
+        outpath = Pkg.dir("NGSIM", "data", "smoothed_"*filename)
+        CSV.write(outpath, trajdata.df)
+        # open(io->write(io, MIME"text/plain"(), trajdata.df), outpath, "w")
+    end
+end
 
 function convert_raw_ngsim_to_trajdatas()
     for filename in NGSIM_TRAJDATA_PATHS
@@ -210,12 +226,12 @@ function convert_raw_ngsim_to_trajdatas()
 end
 
 const TRAJDATA_PATHS = [
-                        Pkg.dir("NGSIM", "data", "trajdata_i101_trajectories-0750am-0805am.txt"),
-                        Pkg.dir("NGSIM", "data", "trajdata_i101_trajectories-0805am-0820am.txt"),
-                        Pkg.dir("NGSIM", "data", "trajdata_i101_trajectories-0820am-0835am.txt"),
-                        Pkg.dir("NGSIM", "data", "trajdata_i80_trajectories-0400-0415.txt"),
-                        Pkg.dir("NGSIM", "data", "trajdata_i80_trajectories-0500-0515.txt"),
-                        Pkg.dir("NGSIM", "data", "trajdata_i80_trajectories-0515-0530.txt"),
+                        Pkg.dir("NGSIM", "data", "trajdata_i101_trajectories-0750am-0805am.csv"),
+                        Pkg.dir("NGSIM", "data", "trajdata_i101_trajectories-0805am-0820am.csv"),
+                        Pkg.dir("NGSIM", "data", "trajdata_i101_trajectories-0820am-0835am.csv"),
+                        Pkg.dir("NGSIM", "data", "trajdata_i80_trajectories-0400-0415.csv"),
+                        Pkg.dir("NGSIM", "data", "trajdata_i80_trajectories-0500-0515.csv"),
+                        Pkg.dir("NGSIM", "data", "trajdata_i80_trajectories-0515-0530.csv"),
                        ]
 
 function load_trajdata(filepath::String)
