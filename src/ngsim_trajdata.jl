@@ -27,29 +27,43 @@ mutable struct NGSIMTrajdata
     car2start  :: Dict{Int, Int}         # maps carindex to starting index in the df
     frame2cars :: Dict{Int, Vector{Int}} # maps frame to list of carids in the scene
 
-    function NGSIMTrajdata(input_path::String)
+    function NGSIMTrajdata(input_path::String;
+        col_types = Dict(
+            "Vehicle_ID" => Int,
+            "Frame_ID" => Int,
+            "Total_Frames" => Int,
+            "Global_Time" => Int,
+            "Local_X" => Float64,
+            "Local_Y" => Float64,
+            "Global_X" => Float64,
+            "Global_Y" => Float64,
+            # "Global_Heading" => Float64,
+            "v_Length" => Float64,
+            "v_Width" => Float64,
+            "v_Class" => Int,
+            "v_Vel" => Float64,
+            "v_Acc" => Float64,
+            "Lane_ID" => Int,
+            "Preceeding" => Int,
+            "Following" => Int,
+            "Space_Hdwy" => Float64,
+            "Time_Hdwy" => Float64,
+        ))
 
         @assert(isfile(input_path))
 
-        # df = readtable(input_path, separator=' ', header = false)
-        df = CSV.read(input_path; types=[Int, Int, Int, Int, Float64, Float64, Float64, Float64, Float64, Float64, Int, Float64, Float64, Int, Int, Int, Float64, Float64])
-        # col_names = [:id, :frame, :n_frames_in_dataset, :epoch, :local_x, :local_y, :global_x, :global_y, :length, :width, :class, :speed, :acc, :lane, :carind_front, :carind_rear, :dist_headway, :time_headway]
-        # current_col_names = df.colindex.names
-        # for (i,old_name) in enumerate(current_col_names)
-        #     rename!(df, old_name => col_names[i])
-        # end
-
-        # df[:global_heading] = fill(NaN, nrow(df))
+        df = CSV.read(input_path; types=col_types)#rows_for_type_detect=6000)
+        df[:Global_Heading] = fill(NaN, nrow(df))
 
         car2start = Dict{Int, Int}()
         frame2cars = Dict{Int, Vector{Int}}()
 
-        for (dfind, carid) in enumerate(df[:id])
+        for (dfind, carid) in enumerate(df[:Vehicle_ID])
             if !haskey(car2start, carid)
                 car2start[carid] = dfind
             end
 
-            frame = convert(Int, df[dfind, :frame])
+            frame = convert(Int, df[dfind, :Frame_ID])
             if !haskey(frame2cars, frame)
                 frame2cars[frame] = [carid]
             else
@@ -77,7 +91,7 @@ function car_df_index(trajdata::NGSIMTrajdata, carid::Int, frame::Int)
     df = trajdata.df
 
     lo = trajdata.car2start[carid]
-    framestart = df[lo, :frame]
+    framestart = df[lo, :Frame_ID]
 
     retval = 0
 
@@ -85,7 +99,7 @@ function car_df_index(trajdata::NGSIMTrajdata, carid::Int, frame::Int)
         retval = lo
     elseif frame ≥ framestart
         retval = frame - framestart + lo
-        n_frames = df[lo, :n_frames_in_dataset]
+        n_frames = df[lo, :Total_Frames]
         if retval > lo + n_frames
             retval = 0
         end
@@ -95,9 +109,9 @@ function car_df_index(trajdata::NGSIMTrajdata, carid::Int, frame::Int)
 end
 function get_frame_range(trajdata::NGSIMTrajdata, carid::Int)
     lo = trajdata.car2start[carid]
-    framestart = trajdata.df[lo, :frame]
+    framestart = trajdata.df[lo, :Frame_ID]
 
-    n_frames = trajdata.df[lo, :n_frames_in_dataset]
+    n_frames = trajdata.df[lo, :Total_Frames]
     frameend = framestart + n_frames - 1
 
     framestart:frameend
@@ -118,7 +132,7 @@ function pull_vehicle_headings!(trajdata::NGSIMTrajdata;
         arr_x = map(p->p.x, states)-states[1].x
         arr_y = map(p->p.y, states)-states[1].y
 
-        arr_v = map(i->hypot(states[i]-states[i-1]), 2:length(states)) / 0.1
+        arr_v = map(i->hypot(states[i]-states[i-1]), 2:v_Length(states)) / 0.1
         slow_indeces = find(v->v < v_cutoff, arr_v)
 
         slow_segments = Tuple{Int,Int}[]
@@ -134,14 +148,14 @@ function pull_vehicle_headings!(trajdata::NGSIMTrajdata;
         end
         slow_segments
 
-        arr_heading = map(i->atan2(convert(VecE2, states[i]-states[i-1])), 2:length(states))
+        arr_heading = map(i->atan2(convert(VecE2, states[i]-states[i-1])), 2:v_Length(states))
         unshift!(arr_heading, arr_heading[1])
 
         arr_x_smoothed = symmetric_exponential_moving_average(arr_x, smoothing_width)
         arr_y_smoothed = symmetric_exponential_moving_average(arr_y, smoothing_width)
         arr_dx_smoothed = arr_x_smoothed[2:end] - arr_x_smoothed[1:end-1]
         arr_dy_smoothed = arr_y_smoothed[2:end] - arr_y_smoothed[1:end-1]
-        arr_heading2 = map(i->atan2(arr_y_smoothed[i]-arr_y_smoothed[i-1], arr_x_smoothed[i]-arr_x_smoothed[i-1]), 2:length(states))
+        arr_heading2 = map(i->atan2(arr_y_smoothed[i]-arr_y_smoothed[i-1], arr_x_smoothed[i]-arr_x_smoothed[i-1]), 2:v_Length(states))
         unshift!(arr_heading2, arr_heading2[1])
 
         arr_heading3 = deepcopy(arr_heading2)
@@ -155,11 +169,11 @@ function pull_vehicle_headings!(trajdata::NGSIMTrajdata;
 
         for (i,frame) in enumerate(frames)
             df_ind = car_df_index(trajdata, carid, frame)
-            df[df_ind, :global_heading] = arr_heading3[i]
+            df[df_ind, :Global_Heading] = arr_heading3[i]
         end
     end
 
-    @assert(findfirst(v->isnan(v), df[:global_heading]) == 0)
+    @assert(findfirst(v->isnan(v), df[:Global_Heading]) == 0)
 
     trajdata
 end

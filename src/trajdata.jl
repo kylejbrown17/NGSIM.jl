@@ -49,8 +49,8 @@ mutable struct FilterTrajectoryResult
 
     function FilterTrajectoryResult(trajdata::NGSIMTrajdata, carid::Int)
         dfstart = trajdata.car2start[carid]
-        # N = trajdata.df[dfstart, :n_frames_in_dataset]
-        N = min(nrow(trajdata.df) - dfstart, trajdata.df[dfstart, :n_frames_in_dataset])
+        # N = trajdata.df[dfstart, :Total_Frames]
+        N = min(nrow(trajdata.df) - dfstart, trajdata.df[dfstart, :Total_Frames])
 
         # these are our observations
         x_arr = fill(NaN, N)
@@ -59,13 +59,13 @@ mutable struct FilterTrajectoryResult
         v_arr = fill(NaN, N)
 
         for i in 1 : N
-            x_arr[i] = trajdata.df[dfstart + i - 1, :global_x]
-            y_arr[i] = trajdata.df[dfstart + i - 1, :global_y]
+            x_arr[i] = trajdata.df[dfstart + i - 1, :Global_X]
+            y_arr[i] = trajdata.df[dfstart + i - 1, :Global_Y]
         end
 
         # choose an initial belief
         θ_arr[1] = atan2(y_arr[5] - y_arr[1], x_arr[5] - x_arr[1])
-        v_arr[1] = trajdata.df[dfstart, :speed] #hypot(ftr.y_arr[lookahead] - y₀, ftr.x_arr[lookahead] - x₀)/ν.Δt
+        v_arr[1] = trajdata.df[dfstart, :v_Vel] #hypot(ftr.y_arr[lookahead] - y₀, ftr.x_arr[lookahead] - x₀)/ν.Δt
         if v_arr[1] < 1.0 # small speed
             # estimate with greater lookahead
             θ_arr[1] = atan2(y_arr[end] - y_arr[1], x_arr[end] - x_arr[1])
@@ -107,20 +107,20 @@ end
 function Base.copy!(trajdata::NGSIMTrajdata, ftr::FilterTrajectoryResult)
 
     dfstart = trajdata.car2start[ftr.carid]
-    # N = trajdata.df[dfstart, :n_frames_in_dataset]
-    N = min(nrow(trajdata.df) - dfstart, trajdata.df[dfstart, :n_frames_in_dataset])
+    # N = trajdata.df[dfstart, :Total_Frames]
+    N = min(nrow(trajdata.df) - dfstart, trajdata.df[dfstart, :Total_Frames])
 
     # copy results back to trajdata
     for i in 1 : N
-        trajdata.df[dfstart + i - 1, :global_x] = ftr.x_arr[i]
-        trajdata.df[dfstart + i - 1, :global_y] = ftr.y_arr[i]
-        # trajdata.df[dfstart + i - 1, :speed]   = ftr.v_arr[i]
+        trajdata.df[dfstart + i - 1, :Global_X] = ftr.x_arr[i]
+        trajdata.df[dfstart + i - 1, :Global_Y] = ftr.y_arr[i]
+        # trajdata.df[dfstart + i - 1, :v_Vel]   = ftr.v_arr[i]
         if i > 1
-            trajdata.df[dfstart + i - 1, :speed]   = hypot(ftr.x_arr[i] - ftr.x_arr[i-1], ftr.y_arr[i] - ftr.y_arr[i-1]) / NGSIM_TIMESTEP
+            trajdata.df[dfstart + i - 1, :v_Vel]   = hypot(ftr.x_arr[i] - ftr.x_arr[i-1], ftr.y_arr[i] - ftr.y_arr[i-1]) / NGSIM_TIMESTEP
         else
-            trajdata.df[dfstart + i - 1, :speed]   = hypot(ftr.x_arr[i+1] - ftr.x_arr[i], ftr.y_arr[i+1] - ftr.y_arr[i]) / NGSIM_TIMESTEP
+            trajdata.df[dfstart + i - 1, :v_Vel]   = hypot(ftr.x_arr[i+1] - ftr.x_arr[i], ftr.y_arr[i+1] - ftr.y_arr[i]) / NGSIM_TIMESTEP
         end
-        trajdata.df[dfstart + i - 1, :global_heading] = ftr.θ_arr[i]
+        trajdata.df[dfstart + i - 1, :Global_Heading] = ftr.θ_arr[i]
     end
 
     trajdata
@@ -169,7 +169,7 @@ function Base.convert(::Type{Trajdata}, tdraw::NGSIMTrajdata, roadway::Roadway)
     frames = Array{RecordFrame}(nframes(tdraw))
 
     for (id, dfind) in tdraw.car2start
-        vehdefs[id] = VehicleDef(df[dfind, :class], df[dfind, :length]*METERS_PER_FOOT, df[dfind, :width]*METERS_PER_FOOT)
+        vehdefs[id] = VehicleDef(df[dfind, :v_Class], df[dfind, :v_Length]*METERS_PER_FOOT, df[dfind, :v_Width]*METERS_PER_FOOT)
     end
 
     state_ind = 0
@@ -180,8 +180,8 @@ function Base.convert(::Type{Trajdata}, tdraw::NGSIMTrajdata, roadway::Roadway)
         for id in carsinframe(tdraw, frame)
             dfind = car_df_index(tdraw, id, frame)
 
-            posG = VecSE2(df[dfind, :global_x]*METERS_PER_FOOT, df[dfind, :global_y]*METERS_PER_FOOT, df[dfind, :global_heading])
-            speed = df[dfind, :speed]*METERS_PER_FOOT
+            posG = VecSE2(df[dfind, :Global_X]*METERS_PER_FOOT, df[dfind, :Global_Y]*METERS_PER_FOOT, df[dfind, :Global_Heading])
+            speed = df[dfind, :v_Vel]*METERS_PER_FOOT
 
             states[state_ind += 1] = RecordState(VehicleState(posG, roadway, speed), id)
         end
@@ -209,13 +209,15 @@ function smooth_ngsim_data()
     end
 end
 
-function convert_raw_ngsim_to_trajdatas()
+
+
+function convert_raw_ngsim_to_trajdatas(;filter=true)
     for filename in NGSIM_TRAJDATA_PATHS
         println("converting ", filename); tic()
 
         filepath = Pkg.dir("NGSIM", "data", filename)
         roadway = get_corresponding_roadway(filename)
-        tdraw = NGSIM.load_ngsim_trajdata(filepath)
+        tdraw = NGSIM.load_ngsim_trajdata(filepath; autofilter=filter)
         trajdata = convert(Trajdata, tdraw, roadway)
 
         outpath = Pkg.dir("NGSIM", "data", "trajdata_"*filename)
