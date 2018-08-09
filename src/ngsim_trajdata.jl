@@ -44,10 +44,10 @@ mutable struct NGSIMTrajdata
             "v_Vel" => Float64,
             "v_Acc" => Float64,
             "Lane_ID" => Int,
-            "Preceeding" => Int,
+            "Preceding" => Int,
             "Following" => Int,
-            "Space_Hdwy" => Float64,
-            "Time_Hdwy" => Float64,
+            "Space_Headway" => Float64,
+            "Time_Headway" => Float64,
         ))
 
         @assert(isfile(input_path))
@@ -184,7 +184,7 @@ const NGSIM_TRAJDATA_PATHS = [
                         "i101_trajectories-0820am-0835am.csv",
                         "i80_trajectories-0400-0415.csv",
                         "i80_trajectories-0500-0515.csv",
-                        "i80_trajectories-0515-0530.csv",
+                        "i80_trajectories-0515-0530.csv"
                        ]
 
 load_ngsim_trajdata(i::Int) = NGSIMTrajdata(NGSIM_TRAJDATA_PATHS[i])
