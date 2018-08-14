@@ -12,7 +12,8 @@ export
     VehicleSummary,
     DataLoader,
     set_index!,
-    step!
+    step!,
+    prune_snapshot
     # NGSIMRoadway,
     # RoadwayInputParams,
     #

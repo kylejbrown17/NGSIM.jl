@@ -125,3 +125,19 @@ end
 function step!(loader::DataLoader)
     set_index!(loader, loader.idx + 1)
 end
+
+function prune_snapshot(snapshot::Dict{Int,VehicleSummary{Float64,Int}}, ego_id::Int;
+    MAX_DIST = 300)
+    """
+    pruned out vehicles that are farther from ego vehicle than MAX_DIST
+    """
+    ego_summary = snapshot[ego_id]
+    pruned_snapshot = similar(snapshot)
+    for k in keys(snapshot)
+        veh_summary = snapshot[k]
+        if norm([veh_summary.X - ego_summary.X; veh_summary.Y - ego_summary.Y]) < MAX_DIST
+            pruned_snapshot[k] = veh_summary
+        end
+    end
+    pruned_snapshot
+end
