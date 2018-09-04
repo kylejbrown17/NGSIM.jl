@@ -12,7 +12,7 @@ GLOBAL_TYPES = Dict(
     :Time_Headway => Float64)
 
 # Convert all CSV files to HDF5
-LOGDIR = Pkg.dir("NGSIM","data")
+LOGDIR = Pkg.dir("NGSIM","data/trajectories")
 OUTDIR = joinpath(LOGDIR,"HDF5")
 filenames = [
                 "i101_trajectories-0750am-0805am",
