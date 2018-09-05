@@ -1,6 +1,9 @@
 """
 DataLoader
 """
+const num2class = Dict(1 => :motorcycle, 2 => :car, 3 => :truck)
+const class2num = Dict(v => k for (k,v ) in num2class)
+
 @with_kw struct VehicleSummary{T,S}
     id::Int64               = 0
     length::Float64         = 4.5

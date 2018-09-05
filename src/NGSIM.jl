@@ -3,7 +3,7 @@ __precompile__(true)
 module NGSIM
 
 # using AutomotiveDrivingModels
-using DataFrames, CSV
+using DataFrames, CSV, Query
 import HDF5
 using Distributions
 using Parameters
@@ -13,7 +13,9 @@ export
     DataLoader,
     set_index!,
     step!,
-    prune_snapshot
+    prune_snapshot,
+    # trajectory smoothing
+    locally_weighted_regression_smoothing,
     # NGSIMRoadway,
     # RoadwayInputParams,
     #
@@ -37,7 +39,13 @@ export
     # convert_raw_ngsim_to_trajdatas,
     # smooth_ngsim_data
 
+    # data conversion
+    convert_csv_to_hdf5,
+    convert_csv_to_smoothed_hdf5
+
 include("data_loader.jl")
+include("trajectory_smoothing.jl")
+include("ngsim_data_conversion.jl")
 # include("roadway.jl")
 # include("ngsim_trajdata.jl")
 # include("trajdata.jl")
