@@ -1,4 +1,7 @@
-function convert_csv_to_hdf5()
+const METERS_PER_FOOT = 0.3048
+
+function convert_csv_to_hdf5(;convert_to_meters=false)
+    factor = (convert_to_meters) ? METERS_PER_FOOT : 1.0
     const GLOBAL_TYPES = Dict(
         :Vehicle_ID => Int,:Frame_ID => Int,:Total_Frames => Int,
         :Global_Time => Int,:Local_X => Float64,:Local_Y => Float64,
@@ -53,27 +56,27 @@ function convert_csv_to_hdf5()
                     car = HDF5.g_create(vehicle_summaries, string(veh_id))
                     # attributes (single element only)
                     HDF5.attrs(car)["id"] = df[i,:Vehicle_ID]
-                    HDF5.attrs(car)["Length"] = df[i,:v_Length]
-                    HDF5.attrs(car)["Width"] = df[i,:v_Width]
+                    HDF5.attrs(car)["Length"] = df[i,:v_Length]     * factor
+                    HDF5.attrs(car)["Width"] = df[i,:v_Width]       * factor
                     HDF5.attrs(car)["Class"] = df[i,:v_Class]
                     # time stamps
                     car["Frame_IDs"] = df[i:j,:Frame_ID]
                     # continuous features (can be smoothed)
                     # continuous_features = HDF5.g_create(car, "car")
-                    car["Global_X"] = df[i:j,:Global_X]
-                    car["Global_Y"] = df[i:j,:Global_Y]
-                    if :Global_Heading in names(df)
-                        car["Heading"] = df[i:j,:Global_Heading]
-                    end
-                    car["Local_X"] = df[i:j,:Local_X]
-                    car["Local_Y"] = df[i:j,:Local_Y]
-                    car["Vel"] = df[i:j,:v_Vel]
-                    car["Acc"] = df[i:j,:v_Acc]
-                    # discrete features (can't be smoothed)
-                    # discrete_features = HDF5.g_create(car, "discrete_features")
-                    car["Lane_ID"] = df[:Lane_ID]
-                    car["Preceding"] = df[:Preceding]
-                    car["Following"] = df[:Following]
+                    car["Global_X"] = df[i:j,:Global_X]             * factor
+                    car["Global_Y"] = df[i:j,:Global_Y]             * factor
+                    # if :Global_Heading in names(df)
+                    #     car["Heading"] = df[i:j,:Global_Heading]
+                    # end
+                    # car["Local_X"] = df[i:j,:Local_X]               * factor
+                    # car["Local_Y"] = df[i:j,:Local_Y]               * factor
+                    # car["Vel"] = df[i:j,:v_Vel]                     * factor
+                    # car["Acc"] = df[i:j,:v_Acc]                     * factor
+                    # # discrete features (can't be smoothed)
+                    # # discrete_features = HDF5.g_create(car, "discrete_features")
+                    # car["Lane_ID"] = df[:Lane_ID]
+                    # car["Preceding"] = df[:Preceding]
+                    # car["Following"] = df[:Following]
                     i = j + 1
                 end
                 # write active vehicle lists
@@ -102,7 +105,8 @@ function convert_csv_to_hdf5()
     print("Processing Complete \n")
 end
 
-function convert_csv_to_smoothed_hdf5()
+function convert_csv_to_smoothed_hdf5(;convert_to_meters=false)
+    factor = (convert_to_meters) ? METERS_PER_FOOT : 1.0
     const GLOBAL_TYPES = Dict(
         :Vehicle_ID => Int,:Frame_ID => Int,:Total_Frames => Int,
         :Global_Time => Int,:Local_X => Float64,:Local_Y => Float64,
@@ -158,33 +162,23 @@ function convert_csv_to_smoothed_hdf5()
                     car = HDF5.g_create(vehicle_summaries, string(veh_id))
                     # attributes (single element only)
                     HDF5.attrs(car)["id"] = df[i,:Vehicle_ID]
-                    HDF5.attrs(car)["Length"] = df[i,:v_Length]
-                    HDF5.attrs(car)["Width"] = df[i,:v_Width]
+                    HDF5.attrs(car)["Length"] = df[i,:v_Length] * factor
+                    HDF5.attrs(car)["Width"] = df[i,:v_Width]   * factor
                     HDF5.attrs(car)["Class"] = df[i,:v_Class]
                     # time stamps
                     car["Frame_IDs"] = df[i:j,:Frame_ID]
                     # continuous features (can be smoothed)
-                    X = smooth(df[i:j,:Global_X],collect(i:j))
+                    X = smooth(df[i:j,:Global_X],collect(i:j))  * factor
                     v_x = diff(X) / dt
                     v_x = vcat(v_x[1],v_x)
                     car["Global_X"] = X
                     car["Vel_x"] = v_x
-                    Y = smooth(df[i:j,:Global_Y],collect(i:j))
+                    Y = smooth(df[i:j,:Global_Y],collect(i:j))  * factor
                     v_y = diff(Y) / dt
                     v_y = vcat(v_y[1],v_y)
                     car["Global_Y"] = Y
                     car["Vel_y"] = v_y
-                    # car["Local_X"] = smooth(df[i:j,:Local_X],collect(i:j))
-                    # car["Local_Y"] = smooth(df[i:j,:Local_Y],collect(i:j))
-                    # if :Global_Heading in names(df)
-                    #     car["Heading"] = df[i:j,:Global_Heading]
-                    # end
-                    # car["Vel"] = df[i:j,:v_Vel]
-                    # car["Acc"] = df[i:j,:v_Acc]
-                    # # discrete features (can't be smoothed)
-                    # car["Lane_ID"] = df[:Lane_ID]
-                    # car["Preceding"] = df[:Preceding]
-                    # car["Following"] = df[:Following]
+
                     i = j + 1
                 end
                 # write active vehicle lists
