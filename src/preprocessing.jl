@@ -1,4 +1,133 @@
 const METERS_PER_FOOT = 0.3048
+const dt = 0.1
+
+smooth = (x,t) -> locally_weighted_regression_smoothing(x,t,t,2;σ=4.0,threshold=0.0001)
+"""
+    `convert_csv_to_smoothed_csv(in_path,out_path;factor=1.0)`
+
+    smooths a NGSIM .csv file at `in_path` and saves the output
+    at `out_path`. `factor` is a scaling factor (which generally
+    is set to METERS_PER_FOOT for conversion from feet to meters)
+"""
+function convert_csv_to_smoothed_csv(
+    in_path,out_path,INPUT_TYPES,OUTPUT_TYPES,OUTPUT_COLS;
+    factor=METERS_PER_FOOT)
+
+    print("processing ", in_path, "...")
+
+    df = CSV.read(in_path;rows=1)
+    type_dict = Dict(k => INPUT_TYPES[k] for k in names(df))
+    # read CSV file
+    df = CSV.read(in_path; types=Dict(String(n) => v for (n,v) in type_dict))
+    if !isfile(out_path) || "--overwrite" in ARGS
+        out_df = DataFrame([OUTPUT_TYPES[c] for c in OUTPUT_COLS],OUTPUT_COLS,0)
+        # record vehicle summaries
+        sort!(df, [:Vehicle_ID, :Frame_ID])
+        i = 1
+        j = i
+        while i < nrow(df)
+            veh_id = df[i,:Vehicle_ID]
+            while (df[j+1,:Vehicle_ID] == veh_id)
+                j += 1
+                if j == nrow(df)
+                    break
+                end
+            end
+            # Smooth X
+            X = smooth(df[i:j,:Global_X],collect(i:j))  * factor
+            v_x = diff(X) / dt
+            v_x = vcat(v_x[1],v_x)
+            # Smooth Y
+            Y = smooth(df[i:j,:Global_Y],collect(i:j))  * factor
+            v_y = diff(Y) / dt
+            v_y = vcat(v_y[1],v_y)
+            # Write to out_df
+            for k in i:j
+                push!(
+                    out_df,
+                    Dict(
+                        :id => df[i,:Vehicle_ID],
+                        :Length => df[i,:v_Length] * factor,
+                        :Width => df[i,:v_Width] * factor,
+                        :Class => df[i,:v_Class],
+
+                        :Frame_ID => df[k,:Frame_ID],
+                        :Global_Time => df[k,:Global_Time],
+                        :Global_X => X[k-i+1],
+                        :Global_Y => Y[k-i+1],
+                        :Vel_x => v_x[k-i+1],
+                        :Vel_y => v_y[k-i+1],
+
+                        :Lane_ID => df[k, :Lane_ID],
+                        :Preceding => df[k,:Preceding],
+                        :Following => df[k,:Following]
+                    )
+                )
+            end
+            i = j + 1
+        end
+        # Write out_df to csv file
+        CSV.write(out_path, out_df)
+        print("done","\n")
+    else
+        print(string("WARNING! You are about to overwrite ", out_path, "\n",
+        "To proceed, pass in argument --overwrite"))
+    end
+end
+
+"""
+    `convert_all_csv_files_to_smoothed_csv(;convert_to_meters=false)`
+
+    Converts all NGSIM .csv files to smoothed csv files. Note that the
+    fieldnames used in the original NGSIM file are different than
+    those used in the final NGSIM file (see function definition for details)
+"""
+function convert_all_csv_files_to_smoothed_csv(;convert_to_meters=false)
+    factor = (convert_to_meters) ? METERS_PER_FOOT : 1.0
+    const GLOBAL_TYPES = Dict(
+        :Vehicle_ID => Int,:Frame_ID => Int,:Total_Frames => Int,
+        :Global_Time => Int,:Local_X => Float64,:Local_Y => Float64,
+        :Global_X => Float64,:Global_Y => Float64, :Global_Heading => Float64,
+        :v_Length => Float64,:v_Width => Float64,:v_Class => Int,
+        :v_Vel => Float64,:v_Acc => Float64,:Lane_ID => Int,
+        :Preceding => Int,:Following => Int,:Space_Headway => Float64,
+        :Time_Headway => Float64)
+
+    const OUTPUT_COLS = [
+        :id, :Length, :Width, :Class,
+        :Frame_ID, :Global_Time, :Global_X, :Global_Y,
+        :Vel_x, :Vel_y, :Lane_ID, :Preceding, :Following
+    ]
+    const OUTPUT_TYPES = Dict(
+        :id => Int, :Length => Float64, :Width => Float64, :Class => Int,
+        :Frame_ID => Int, :Global_Time => Float64, :Global_X => Float64,
+        :Global_Y => Float64, :Vel_x => Float64, :Vel_y => Float64,
+        :Lane_ID => Int, :Preceding => Int, :Following => Int
+    )
+
+    # Convert all CSV files to HDF5
+    LOGDIR = Pkg.dir("NGSIM","data")
+    OUTDIR = joinpath(LOGDIR,"SMOOTHED")
+    filenames = [
+        "i101_trajectories-0750am-0805am",
+        "i101_trajectories-0805am-0820am",
+        "i101_trajectories-0820am-0835am",
+        "i80_trajectories-0400-0415",
+        "i80_trajectories-0500-0515",
+        "i80_trajectories-0515-0530"
+    ]
+
+    smooth = (x,t) -> locally_weighted_regression_smoothing(x,t,t,2;σ=4.0,threshold=0.0001)
+    # Convert NGSIM CSV files to a trajectory-based HDF5 format
+    for filename in filenames
+        in_path = joinpath(LOGDIR, string(filename, ".csv"))
+        out_path = joinpath(OUTDIR, string(filename, ".csv"))
+        # print("processing ", filename, "...\n")
+        convert_csv_to_smoothed_csv(in_path,out_path,GLOBAL_TYPES,OUTPUT_TYPES,
+            OUTPUT_COLS;factor=factor)
+    end
+    print("All Files Processed \n")
+end
 
 function convert_csv_to_hdf5(;convert_to_meters=false)
     factor = (convert_to_meters) ? METERS_PER_FOOT : 1.0
@@ -116,7 +245,6 @@ function convert_csv_to_smoothed_hdf5(;convert_to_meters=false)
         :Preceding => Int,:Following => Int,:Space_Headway => Float64,
         :Time_Headway => Float64)
 
-    const dt = 0.1
     # Convert all CSV files to HDF5
     LOGDIR = Pkg.dir("NGSIM","data")
     OUTDIR = joinpath(LOGDIR,"HDF5")

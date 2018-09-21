@@ -41,11 +41,13 @@ export
 
     # data conversion
     convert_csv_to_hdf5,
-    convert_csv_to_smoothed_hdf5
+    convert_csv_to_smoothed_hdf5,
+    convert_csv_to_smoothed_csv,
+    convert_all_csv_files_to_smoothed_csv
 
 include("data_loader.jl")
 include("trajectory_smoothing.jl")
-include("ngsim_data_conversion.jl")
+include("preprocessing.jl")
 # include("roadway.jl")
 # include("ngsim_trajdata.jl")
 # include("trajdata.jl")
