@@ -1,6 +1,11 @@
-"""
-DataLoader
-"""
+export
+    VehicleSummary,
+    vehicle_summary_from_dict,
+    DataLoader,
+    set_index!,
+    step!,
+    prune_snapshot
+
 const num2class = Dict(1 => :motorcycle, 2 => :car, 3 => :truck)
 const class2num = Dict(v => k for (k,v ) in num2class)
 
@@ -65,8 +70,8 @@ function vehicle_summary_from_dict(dict)
         Y       = get(dict, "Global_Y", fill!(Array{Float64}(N),NaN)),
         θ       = get(dict, "Heading", fill!(Array{Float64}(N),NaN)),
         v       = get(dict, "Vel", fill!(Array{Float64}(N),NaN)),
-        v_x     = get(dict, "Vel_x", fill!(Array{Float64}(N),NaN)),
-        v_y     = get(dict, "Vel_y", fill!(Array{Float64}(N),NaN)),
+        v_x     = get(dict, "Vel_X", fill!(Array{Float64}(N),NaN)),
+        v_y     = get(dict, "Vel_Y", fill!(Array{Float64}(N),NaN)),
         s       = get(dict, "S", fill!(Array{Float64}(N),NaN)),
         t       = get(dict, "T", fill!(Array{Float64}(N),NaN)),
         ϕ       = get(dict, "Phi", fill!(Array{Float64}(N),NaN)),
@@ -95,24 +100,6 @@ function DataLoader(filepath::String; idx=1)
         car["Width"]    = HDF5.a_read(hdf5_file["vehicle_summaries"][string(id)], "Width")
         car["Class"]    = HDF5.a_read(hdf5_file["vehicle_summaries"][string(id)], "Class")
         vehicle_summaries[id] = vehicle_summary_from_dict(car)
-        # N = length(car["Frame_IDs"])
-        # vehicle_summaries[id] = VehicleSummary{Vector{Float64},Vector{Int}}(
-        #     id      = HDF5.read(HDF5.attrs(hdf5_file["vehicle_summaries"][string(id)])["id"]),
-        #     length  = HDF5.read(HDF5.attrs(hdf5_file["vehicle_summaries"][string(id)])["Length"]),
-        #     width   = HDF5.read(HDF5.attrs(hdf5_file["vehicle_summaries"][string(id)])["Width"]),
-        #     class   = HDF5.read(HDF5.attrs(hdf5_file["vehicle_summaries"][string(id)])["Class"]),
-        #     time_stamps = car["Frame_IDs"],
-        #     X       = get(car, "Global_X", fill!(Array{Float64}(N),NaN)),
-        #     Y       = get(car, "Global_Y", fill!(Array{Float64}(N),NaN)),
-        #     θ       = get(car, "Heading", fill!(Array{Float64}(N),NaN)),
-        #     v       = get(car, "Vel", fill!(Array{Float64}(N),NaN)),
-        #     v_x     = get(car, "Vel_x", fill!(Array{Float64}(N),NaN)),
-        #     v_y     = get(car, "Vel_y", fill!(Array{Float64}(N),NaN)),
-        #     s       = get(car, "S", fill!(Array{Float64}(N),NaN)),
-        #     t       = get(car, "T", fill!(Array{Float64}(N),NaN)),
-        #     ϕ       = get(car, "Phi", fill!(Array{Float64}(N),NaN)),
-        #     lane_ids = get(car, "Lane_ID", fill!(Array{Int64}(N),typemin(Int))),
-        # )
     end
     DataLoader(hdf5_file,active_vehicles,time_stamps,idx,vehicle_summaries)
 end
@@ -132,24 +119,6 @@ function set_index!(loader::DataLoader, idx)
             car["Width"]    = HDF5.a_read(loader.hdf5_file["vehicle_summaries"][string(id)], "Width")
             car["Class"]    = HDF5.a_read(loader.hdf5_file["vehicle_summaries"][string(id)], "Class")
             loader.vehicle_summaries[id] = vehicle_summary_from_dict(car)
-            # N = length(car["Frame_IDs"])
-            # loader.vehicle_summaries[id] = VehicleSummary(
-            #     id      = HDF5.read(HDF5.attrs(loader.hdf5_file["vehicle_summaries"][string(id)])["id"]),
-            #     length  = HDF5.read(HDF5.attrs(loader.hdf5_file["vehicle_summaries"][string(id)])["Length"]),
-            #     width   = HDF5.read(HDF5.attrs(loader.hdf5_file["vehicle_summaries"][string(id)])["Width"]),
-            #     class   = HDF5.read(HDF5.attrs(loader.hdf5_file["vehicle_summaries"][string(id)])["Class"]),
-            #     time_stamps = car["Frame_IDs"],
-            #     X       = get(car, "Global_X", fill!(Array{Float64}(N),NaN)),
-            #     Y       = get(car, "Global_Y", fill!(Array{Float64}(N),NaN)),
-            #     θ       = get(car, "Heading", fill!(Array{Float64}(N),NaN)),
-            #     v       = get(car, "Vel", fill!(Array{Float64}(N),NaN)),
-            #     v_x     = get(car, "Vel_x", fill!(Array{Float64}(N),NaN)),
-            #     v_y     = get(car, "Vel_y", fill!(Array{Float64}(N),NaN)),
-            #     s       = get(car, "S", fill!(Array{Float64}(N),NaN)),
-            #     t       = get(car, "T", fill!(Array{Float64}(N),NaN)),
-            #     ϕ       = get(car, "Phi", fill!(Array{Float64}(N),NaN)),
-            #     lane_ids = get(car, "Lane_ID", fill!(Array{Int64}(N),typemin(Int))),
-            #     )
         end
     end
     """
