@@ -4,7 +4,8 @@ export
     DataLoader,
     set_index!,
     step!,
-    prune_snapshot
+    prune_snapshot,
+    pull_trajectories_from_NGSIM_df
 
 const num2class = Dict(1 => :motorcycle, 2 => :car, 3 => :truck)
 const class2num = Dict(v => k for (k,v ) in num2class)
@@ -151,4 +152,81 @@ function prune_snapshot(snapshot::Dict{Int,VehicleSummary{Float64,Int}}, ego_id:
         end
     end
     pruned_snapshot
+end
+
+function pull_trajectories_from_NGSIM_df(df::DataFrame)
+    """
+    N is the number of trajectories to pull (the full state history of a given vehicle)
+    start_idx
+    """
+    trajectories = Dict{Int,Vector{VehicleState}}()
+
+    i = 1
+    j = i
+    while i < size(df)[1]
+        veh_id = df[i,:id]
+        trajectory = Vector{VehicleState}()
+        while j < size(df)[1]
+            if !(df[j+1,:id] == veh_id)
+                break
+            end
+            dynamic_state = LinearGaussianDynamicState(
+                μ = LinearDynamicState(
+                    x = df[j,:Global_X],
+                    y = df[j,:Global_Y],
+                    v_x = df[j,:Vel_X],
+                    v_y = df[j,:Vel_Y]
+                )
+            )
+            state = VehicleState(open_map, dynamic_state, df[j,:Frame_ID])
+            push!(trajectory,state)
+            j += 1
+        end
+        trajectories[veh_id] = trajectory
+        i = j+1
+        j = i
+    end
+    return trajectories
+end
+
+function pull_trajectories_from_NGSIM_df(df::DataFrame,veh_ids::Set{Int})
+    """
+    N is the number of trajectories to pull (the full state history of a given vehicle)
+    start_idx
+    """
+    df_data = @from i in df begin
+        @orderby i.id, i.Frame_ID
+        @where any([i.id == id for id in veh_ids])
+        @select i
+        @collect DataFrame
+    end
+
+    trajectories = Dict{Int,Vector{VehicleState}}()
+
+    i = 1
+    j = i
+    while i < size(df_data)[1]
+        veh_id = df_data[i,:id]
+        trajectory = Vector{VehicleState}()
+        while j < size(df_data)[1]
+            if !(df_data[j+1,:id] == veh_id)
+                break
+            end
+            dynamic_state = LinearGaussianDynamicState(
+                μ = LinearDynamicState(
+                    x = df_data[j,:Global_X],
+                    y = df_data[j,:Global_Y],
+                    v_x = df_data[j,:Vel_X],
+                    v_y = df_data[j,:Vel_Y]
+                )
+            )
+            state = VehicleState(open_map, dynamic_state, df_data[j,:Frame_ID])
+            push!(trajectory,state)
+            j += 1
+        end
+        trajectories[veh_id] = trajectory
+        i = j+1
+        j = i
+    end
+    return trajectories
 end
