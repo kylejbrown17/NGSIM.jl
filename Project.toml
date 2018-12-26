@@ -1,0 +1,12 @@
+name = "NGSIM"
+uuid = "5023ee20-fe71-11e8-1b30-2df05f2ba055"
+authors = ["kylebrown <kylejbrown17@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"

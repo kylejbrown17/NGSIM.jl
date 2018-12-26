@@ -64,7 +64,6 @@ function vehicle_summary_from_dict(dict)
         id      = get(dict, "id", -1),
         length  = get(dict, "Length", 4.5),
         width   = get(dict, "Width", 2.8),
-        width   = get(dict, "Width", 1.8),
         class   = get(dict, "Class", 1),
         time_stamps = get(dict, "Frame_IDs", fill!(Array{Int}(N),typemin(Int))),
         X       = get(dict, "Global_X", fill!(Array{Float64}(N),NaN)),

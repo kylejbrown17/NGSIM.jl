@@ -91,7 +91,7 @@ end
     definition for details)
 """
 function convert_raw_csv_files_to_smoothed_csv(;filepaths=nothing,convert_to_meters=false)
-    const INPUT_TYPES = Dict(
+    INPUT_TYPES = Dict(
         :Vehicle_ID => Int,:Frame_ID => Int,:Total_Frames => Int,
         :Global_Time => Int,:Local_X => Float64,:Local_Y => Float64,
         :Global_X => Float64,:Global_Y => Float64, :Global_Heading => Float64,
@@ -100,12 +100,12 @@ function convert_raw_csv_files_to_smoothed_csv(;filepaths=nothing,convert_to_met
         :Preceding => Int,:Following => Int,:Space_Headway => Float64,
         :Time_Headway => Float64)
 
-    const OUTPUT_COLS = [
+    OUTPUT_COLS = [
         :id, :Length, :Width, :Class,
         :Frame_ID, :Global_Time, :Global_X, :Global_Y,
         :Vel_X, :Vel_Y, :Lane_ID, :Preceding, :Following
     ]
-    const OUTPUT_TYPES = Dict(
+    OUTPUT_TYPES = Dict(
         :id => Int, :Length => Float64, :Width => Float64, :Class => Int,
         :Frame_ID => Int, :Global_Time => Float64, :Global_X => Float64,
         :Global_Y => Float64, :Vel_X => Float64, :Vel_Y => Float64,
@@ -223,7 +223,7 @@ end
 
 function convert_smoothed_csv_files_to_hdf5(;filepaths=nothing,convert_to_meters=false)
     # factor = (convert_to_meters) ? METERS_PER_FOOT : 1.0
-    const INPUT_TYPES = Dict(
+    INPUT_TYPES = Dict(
         :Vehicle_ID => Int,:Frame_ID => Int,:Total_Frames => Int,
         :Global_Time => Int,:Local_X => Float64,:Local_Y => Float64,
         :Global_X => Float64,:Global_Y => Float64, :Global_Heading => Float64,
@@ -232,12 +232,12 @@ function convert_smoothed_csv_files_to_hdf5(;filepaths=nothing,convert_to_meters
         :Preceding => Int,:Following => Int,:Space_Headway => Float64,
         :Time_Headway => Float64)
 
-    const OUTPUT_COLS = [
+    OUTPUT_COLS = [
         :id, :Length, :Width, :Class,
         :Frame_ID, :Global_Time, :Global_X, :Global_Y,
         :Vel_X, :Vel_Y, :Lane_ID, :Preceding, :Following
     ]
-    const OUTPUT_TYPES = Dict(
+    OUTPUT_TYPES = Dict(
         :id => Int, :Length => Float64, :Width => Float64, :Class => Int,
         :Frame_ID => Int, :Global_Time => Float64, :Global_X => Float64,
         :Global_Y => Float64, :Vel_X => Float64, :Vel_Y => Float64,
@@ -270,7 +270,7 @@ end
 
 function convert_raw_csv_files_to_smoothed_hdf5(;convert_to_meters=false)
     factor = (convert_to_meters) ? METERS_PER_FOOT : 1.0
-    const INPUT_TYPES = Dict(
+    INPUT_TYPES = Dict(
         :Vehicle_ID => Int,:Frame_ID => Int,:Total_Frames => Int,
         :Global_Time => Int,:Local_X => Float64,:Local_Y => Float64,
         :Global_X => Float64,:Global_Y => Float64, :Global_Heading => Float64,
