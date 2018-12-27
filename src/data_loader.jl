@@ -143,7 +143,7 @@ function prune_snapshot(snapshot::Dict{Int,VehicleSummary{Float64,Int}}, ego_id:
     pruned out vehicles that are farther from ego vehicle than MAX_DIST
     """
     ego_summary = snapshot[ego_id]
-    pruned_snapshot = similar(snapshot)
+    pruned_snapshot = Dict{Int,VehicleSummary{Float64,Int}}()
     for k in keys(snapshot)
         veh_summary = snapshot[k]
         if norm([veh_summary.X - ego_summary.X; veh_summary.Y - ego_summary.Y]) < MAX_DIST
